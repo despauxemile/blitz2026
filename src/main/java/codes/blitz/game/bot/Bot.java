@@ -223,12 +223,12 @@ public class Bot {
         }
         try {
             nextPos = pathss.get(spore.id()).getFirst();
+            pathss.get(spore.id()).removeFirst();
+            if (pathss.get(spore.id()).isEmpty()) {
+                pathss.remove(spore.id());
+            }
         }catch (Exception e) {
             nextPos = ableToGo.getFirst().first().getFirst();
-        }
-        pathss.get(spore.id()).removeFirst();
-        if (pathss.get(spore.id()).isEmpty()) {
-            pathss.remove(spore.id());
         }
         return new SporeMoveToAction(spore.id(), new Position(nextPos.x, nextPos.y));
     }
