@@ -11,7 +11,6 @@ public class Bot {
     Random random = new Random();
     static List<PosNutrient> sortedNutrient = new ArrayList<>();
     static HashMap<String, List<PathFinder.State>> pathss = new HashMap<>();
-    static SpawnerState spawnerState = SpawnerState.FewerStronger;
     static boolean weWinning = false;
     static int bank = 0;
     static boolean first = true;
@@ -34,18 +33,10 @@ public class Bot {
             first = false;
         }
         HashMap<String, List<PathFinder.State>> pathsnew = new HashMap<>();
-        for (Spore spor : gameMessage.world().spores()) {
+        for (Spore spor : myTeam.spores()) {
             if (pathss.containsKey(spor.id())) {
                 pathsnew.put(spor.id(), pathss.get(spor.id()));
             }
-        }
-
-        if (spawnerState == SpawnerState.MoreWeaker) {
-            System.out.println("We are bursting");
-        }
-        if (weWinning && spawnerState == SpawnerState.FewerStronger) {
-            System.out.println("We have advantage");
-            spawnerState = SpawnerState.MoreWeaker;
         }
 
         if (decideIfCreateSpawner(gameMessage)) {
@@ -54,12 +45,13 @@ public class Bot {
             actions.add(new SporeCreateSpawnerAction(getIdSporeFurtherFromOtherTeam(gameMessage)));
         }
         for (int i = 0; i < myTeam.spawners().size(); i++) {
-            if (spawnerState == SpawnerState.MoreWeaker || decideIfSpawnSpore(gameMessage)) {
-                if (gameMessage.tick() > 25 && !myTeam.spores().isEmpty())
+            if (decideIfSpawnSpore(gameMessage)) {
+                if (gameMessage.tick() > 25 && !myTeam.spores().isEmpty() && bank < 15)
                     bank += 1;
                 if (myTeam.spawners().size() >= 5) {
                     bank = 0;
                 }
+                System.out.println(bank);
                 actions.add(new SpawnerProduceSporeAction(myTeam.spawners().get(i).id(), (myTeam.nutrients() - bank) / myTeam.spawners().size()));
             }
         }
@@ -96,11 +88,13 @@ public class Bot {
     }
 
     public boolean decideIfSpawnSpore(TeamGameState gameMessage) {
-        TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
-        if (myTeam.spores().isEmpty())
-            return true;
-        Spore strongest = getStrongestSpore(gameMessage);
-        return myTeam.nutrients() > strongest.biomass();
+        return true;
+        // Bonjour équipe de revue de code :)
+//        TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+//        if (myTeam.spores().isEmpty())
+//            return true;
+//        Spore strongest = getStrongestSpore(gameMessage);
+//        return myTeam.nutrients() > strongest.biomass();
     }
 
 
