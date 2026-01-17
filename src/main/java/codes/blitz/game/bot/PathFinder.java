@@ -96,7 +96,7 @@ public class PathFinder {
             if (current.x == startX && current.y == startY) break;
             current = parent[current.x][current.y];
         }
-
+        path.removeFirst();
         return path;
     }
 }

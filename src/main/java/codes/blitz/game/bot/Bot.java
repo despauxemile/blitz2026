@@ -98,6 +98,9 @@ public class Bot {
             Position position = posNutrient.position;
             if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId())) {
                 List<PathFinder.State> shortest = shortestPathRealCost(gameMessage, spore.position(), position);
+                if (shortest.isEmpty()){
+                    continue;
+                }
                 int dist = shortest.getLast().cost;
                 if (dist <= spore.biomass()) {
                     positions.add(shortest);
