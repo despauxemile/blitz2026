@@ -17,6 +17,12 @@ public class PathFinder {
         }
 
         @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof State state)) return false;
+            return x == state.x && y == state.y;
+        }
+
+        @Override
         public String toString() {
             return "State{" +
                     "x=" + x +
