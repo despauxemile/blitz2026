@@ -39,6 +39,9 @@ public class Bot {
             }
         }
 
+        if (spawnerState == SpawnerState.MoreWeaker){
+            System.out.println("We are bursting");
+        }
         if (weWinning && spawnerState == SpawnerState.FewerStronger) {
             System.out.println("We have advantage");
             spawnerState = SpawnerState.MoreWeaker;
@@ -76,7 +79,7 @@ public class Bot {
 
     public boolean decideIfCreateSpawner(TeamGameState gameMessage) {
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
-        if (myTeam.spawners().isEmpty() || (spawnerState == SpawnerState.MoreWeaker && myTeam.spawners().size() < 2)) {
+        if (myTeam.spawners().isEmpty() || (spawnerState == SpawnerState.MoreWeaker && myTeam.spawners().size() < 4)) {
             return true;
         }
         return false;
