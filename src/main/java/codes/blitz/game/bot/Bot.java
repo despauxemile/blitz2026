@@ -179,6 +179,8 @@ public class Bot {
     }
 
     public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
+        PathFinder.State nextPos;
+        List<Pair<List<PathFinder.State>, Integer>> ableToGo = new ArrayList<>();
         if (gameMessage.world().map().nutrientGrid()[spore.position().x()][spore.position().y()] > 0) {
             if (noSpawnerAroundPoint(gameMessage, spore.position())) {
                 TeamInfo ours = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
@@ -193,19 +195,19 @@ public class Bot {
         if (!pathss.containsKey(spore.id())) {
             int mini = findMinNutrient(gameMessage);
             List<PosNutrient> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
-            List<Pair<List<PathFinder.State>, Integer>> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
+            ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
             if (ableToGo.isEmpty()) {
                 int ranx = random.nextInt(gameMessage.world().map().width());
                 int rany = random.nextInt(gameMessage.world().map().height());
                 return new SporeMoveToAction(spore.id(), new Position(ranx, rany));
             }
             ableToGo.sort(Comparator.comparing(Pair::second));
-            ableToGo = ableToGo.stream()
+            List<Pair<List<PathFinder.State>, Integer>> filteredAbleToGo = ableToGo.stream()
                     .filter(e -> gameMessage.world().map().nutrientGrid()[e.first().getLast().x][e.first().getLast().y] != mini).toList();
-            for(var e : ableToGo) {
+            for(var e : filteredAbleToGo) {
                 System.out.println(gameMessage.world().map().nutrientGrid()[e.first().getLast().x][e.first().getLast().y]);
             }
-            for(Pair<List<PathFinder.State>, Integer> paths : ableToGo) {
+            for(Pair<List<PathFinder.State>, Integer> paths : filteredAbleToGo) {
                 int already = 0;
                 for (List<PathFinder.State> objective : pathss.values()) {
                     if (objective.getLast().equals(paths.first().getLast())) {
@@ -219,7 +221,11 @@ public class Bot {
             }
 
         }
-        PathFinder.State nextPos = pathss.get(spore.id()).getFirst();
+        try {
+            nextPos = pathss.get(spore.id()).getFirst();
+        }catch (Exception e) {
+            nextPos = ableToGo.getFirst().first().getFirst();
+        }
         pathss.get(spore.id()).removeFirst();
         if (pathss.get(spore.id()).isEmpty()) {
             pathss.remove(spore.id());
