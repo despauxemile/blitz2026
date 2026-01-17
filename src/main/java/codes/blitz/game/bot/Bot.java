@@ -201,13 +201,16 @@ public class Bot {
     }
 
     public static boolean weHaveAdvantage(TeamGameState gameState) {
-        return Objects.equals(advantagedTeam(gameState), gameState.yourTeamId());
+        return Objects.equals(advantagedTeam(gameState), gameState.yourTeamId()) && gameState.tick() >= 50;
     }
 
     public static String advantagedTeam(TeamGameState gameState) {
         String maxiS = gameState.yourTeamId();
         int maxi = 0;
         for (String teams : gameState.teamIds()) {
+            if (teams.equals(gameState.constants().neutralTeamId())) {
+                continue;
+            }
             if (maxi < howMuchTeamProduce(gameState, teams)) {
                 maxiS = teams;
             }
