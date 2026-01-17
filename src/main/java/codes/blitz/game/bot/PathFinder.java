@@ -69,7 +69,7 @@ public class PathFinder {
             if (current.cost > dist[current.x][current.y]) continue;
 
             if (current.x == goalX && current.y == goalY) {
-                return reconstructPath(parent, startX, startY, goalX, goalY);
+                return reconstructPath(parent, startX, startY, goalX, goalY, dist[goalX][goalY]);
             }
 
             for (int i = 0; i < 4; i++) {
@@ -83,7 +83,7 @@ public class PathFinder {
 
                 if (newCost < dist[nx][ny]) {
                     dist[nx][ny] = newCost;
-                    parent[nx][ny] = new State(current.x, current.y, newCost);
+                    parent[nx][ny] = new State(current.x, current.y, current.cost);
                     pq.add(new State(nx, ny, newCost));
                 }
             }
@@ -95,17 +95,20 @@ public class PathFinder {
     private static List<State> reconstructPath(
             State[][] parent,
             int startX, int startY,
-            int goalX, int goalY
+            int goalX, int goalY,
+            int totalCost
     ) {
         LinkedList<State> path = new LinkedList<>();
-        State current = parent[goalX][goalY];
+        State current = new State(goalX, goalY, totalCost);
 
         while (current != null) {
             path.addFirst(current);
             if (current.x == startX && current.y == startY) break;
             current = parent[current.x][current.y];
         }
+
         path.removeFirst();
         return path;
     }
+
 }
