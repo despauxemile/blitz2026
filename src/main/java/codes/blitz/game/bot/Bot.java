@@ -239,14 +239,11 @@ public class Bot {
     }
 
     public int findMinNutrient(TeamGameState gameMessage) {
-        int min = Integer.MAX_VALUE;
-        for (int i = 0; i < gameMessage.world().map().nutrientGrid().length; i++){
-            int lineMin = Arrays.stream(gameMessage.world().map().nutrientGrid()[i]).min().getAsInt();
-            if (lineMin < min) {
-                min = lineMin;
-            }
-        }
-        return min;
+        return Arrays.stream(gameMessage.world().map().nutrientGrid())
+                .filter(row -> row.length > 0)
+                .flatMapToInt(Arrays::stream)
+                .min()
+                .orElse(Integer.MAX_VALUE);
     }
 
     public int distanceSporePosition(Position spore, Position position) {

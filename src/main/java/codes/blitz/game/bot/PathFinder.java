@@ -44,7 +44,12 @@ public class PathFinder {
         int goalX = goal.x();
         int goalY = goal.y();
 
-        int[][] grid = gameMessage.world().map().nutrientGrid();
+        int[][] original = gameMessage.world().map().nutrientGrid();
+        int[][] grid = new int[original.length][];
+
+        for (int i = 0; i < original.length; i++) {
+            grid[i] = original[i].clone(); // clones each row
+        }
 
         int oursWinningValue = weWinning && gameMessage.tick() > 800 ? 2 : 1;
         int enemyEmptyValue = weWinning && gameMessage.tick() > 8000 ? 1 : 2;
