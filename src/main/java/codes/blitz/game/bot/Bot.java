@@ -197,7 +197,7 @@ public class Bot {
                         already += 1;
                     }
                 }
-                if (already < 4) {
+                if ((already < 4) || (already < 6 && gameMessage.tick() < 50)) {
                     pathss.put(spore.id(), states);
                     break;
                 }
@@ -220,7 +220,7 @@ public class Bot {
         TeamInfo ours = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
         for (Spawner spawner : ours.spawners()) {
             int dist = distanceSporePosition(position, spawner.position());
-            if (dist < 4 && dist > 0) {
+            if (dist < gameMessage.world().map().height() / 5 && dist > 0) {
                 return false;
             }
         }
