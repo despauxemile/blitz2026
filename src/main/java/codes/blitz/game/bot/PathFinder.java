@@ -46,8 +46,8 @@ public class PathFinder {
 
         int[][] grid = gameMessage.world().map().nutrientGrid();
 
-        int oursWinningValue = 0;
-        int enemyEmptyValue = 1;
+        int oursWinningValue = weWinning ? 1 : 0;
+        int enemyEmptyValue = weWinning ? 0 : 1;
 
         for (int i = 0; i < grid.length; i++) {
             for (int j = 0; j < grid[0].length; j++) {
