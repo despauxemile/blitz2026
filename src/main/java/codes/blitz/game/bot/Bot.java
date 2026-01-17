@@ -156,12 +156,12 @@ public class Bot {
      */
     public List<List<PathFinder.State>> determineMostNutrientAbleToGo(TeamGameState gameMessage, Spore spore, List<PosNutrient> sortedNutrientPosition) {
         List<List<PathFinder.State>> positions = new ArrayList<>();
-        for (PosNutrient posNutrient : sortedNutrientPosition) {
+        for (int i = 0; i < Math.min(sortedNutrientPosition.size(),10);i++) {
+            PosNutrient posNutrient = sortedNutrientPosition.get(i);
             Position position = posNutrient.position;
             if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId()) && gameMessage.world().map().nutrientGrid()[position.x()][position.y()] > 0) {
-
                 List<PathFinder.State> shortest = shortestPathRealCost(gameMessage, spore.position(), position);
-                if (shortest.isEmpty()) {
+                if (shortest.isEmpty() || gameMessage.world().map().nutrientGrid()[shortest.getLast().x][shortest.getLast().y] == 0) {
                     continue;
                 }
                 int dist = shortest.getLast().cost;
@@ -170,7 +170,9 @@ public class Bot {
                 }
             }
         }
-        return positions;
+        return positions.stream()
+                .sorted(Comparator.comparingInt(List::size))
+                .toList();
     }
 
     public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
@@ -216,8 +218,6 @@ public class Bot {
     }
 
     private boolean noSpawnerAroundPoint(TeamGameState gameMessage, Position position) {
-        int x = position.x();
-        int y = position.y();
         TeamInfo ours = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
         for (Spawner spawner : ours.spawners()) {
             int dist = distanceSporePosition(position, spawner.position());
