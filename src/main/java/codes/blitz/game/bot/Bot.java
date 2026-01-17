@@ -46,7 +46,7 @@ public class Bot {
 
     public boolean decideIfCreateSpawner(TeamGameState gameMessage) {
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
-        if (myTeam.spawners().isEmpty() || (spawnerState == SpawnerState.MoreWeaker && myTeam.spawners().size() < 1)) {
+        if (myTeam.spawners().isEmpty() || (spawnerState == SpawnerState.MoreWeaker && myTeam.spawners().size() < 2)) {
             return true;
         }
         return false;
