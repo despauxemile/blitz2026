@@ -18,6 +18,7 @@ public class Bot {
     static public boolean weWinning = false;
     static private int bank = 0;
     static private boolean firstTick = true;
+    static private int minv = 0;
 
     public Bot() {
         System.out.println("Initializing your super mega duper bot");
@@ -30,6 +31,11 @@ public class Bot {
 
         if (firstTick) {
             actions.addAll(createSpawnersForIsolatedSpores(gameMessage));
+             minv = Arrays.stream(gameMessage.world().map().nutrientGrid())
+                    .flatMapToInt(Arrays::stream)
+                    .filter(v -> v > 0)
+                    .min()
+                    .orElse(0);
             firstTick = false;
         }
 
@@ -217,6 +223,7 @@ public class Bot {
             }
         }
         List<PosNutrient> p = getCellsSortedByNutrient(gameMessage);
+        p.sort(Comparator.comparingInt(pp -> pp.nutrient == 0 ? 10000 : distanceBetweenPositions(sporePos, pp.position)));
         for (PosNutrient posNutrient : p) {
             if (!Objects.equals(gameMessage.world().ownershipGrid()[posNutrient.position.x()][posNutrient.position.y()], gameMessage.yourTeamId())) {
                 return new SporeMoveToAction(spore.id(), posNutrient.position);
