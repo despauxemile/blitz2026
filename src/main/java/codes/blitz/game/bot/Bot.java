@@ -158,8 +158,8 @@ public class Bot {
      * Assume que la liste de position passée est triée
      * en fonction que le premier est la position avec le plus de nutriments
      */
-    public List<List<PathFinder.State>> determineMostNutrientAbleToGo(TeamGameState gameMessage, Spore spore, List<PosNutrient> sortedNutrientPosition) {
-        List<List<PathFinder.State>> positions = new ArrayList<>();
+    public List<Pair<List<PathFinder.State>, java. lang. Integer>> determineMostNutrientAbleToGo(TeamGameState gameMessage, Spore spore, List<PosNutrient> sortedNutrientPosition) {
+        List<Pair<List<PathFinder.State>, java. lang. Integer>> positions = new ArrayList<>();
         int i = 0;
         while (i < sortedNutrientPosition.size()) {
             PosNutrient posNutrient = sortedNutrientPosition.get(i);
@@ -171,7 +171,7 @@ public class Bot {
                     continue;
                 }
                 int dist = shortest.getLast().cost;
-                positions.add(shortest);
+                positions.add(new Pair<>(shortest, dist));
 
             }
         }
@@ -191,29 +191,33 @@ public class Bot {
         }
 
         if (!pathss.containsKey(spore.id())) {
+            int mini = findMinNutrient(gameMessage);
             List<PosNutrient> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
-            List<List<PathFinder.State>> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
+            List<Pair<List<PathFinder.State>, Integer>> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
             if (ableToGo.isEmpty()) {
                 int ranx = random.nextInt(gameMessage.world().map().width());
                 int rany = random.nextInt(gameMessage.world().map().height());
                 return new SporeMoveToAction(spore.id(), new Position(ranx, rany));
             }
-            if (!weWinning){
-            for (List<PathFinder.State> states : ableToGo) {
+            ableToGo.sort(Comparator.comparing(Pair::second));
+            ableToGo = ableToGo.stream()
+                    .filter(e -> gameMessage.world().map().nutrientGrid()[e.first().getLast().x][e.first().getLast().y] != mini).toList();
+            for(var e : ableToGo) {
+                System.out.println(gameMessage.world().map().nutrientGrid()[e.first().getLast().x][e.first().getLast().y]);
+            }
+            for(Pair<List<PathFinder.State>, Integer> paths : ableToGo) {
                 int already = 0;
                 for (List<PathFinder.State> objective : pathss.values()) {
-                    if (objective.getLast().equals(states.getLast())) {
+                    if (objective.getLast().equals(paths.first().getLast())) {
                         already += 1;
                     }
                 }
                 if ((already < 15)) {
-                    pathss.put(spore.id(), states);
+                    pathss.put(spore.id(), paths.first());
                     break;
                 }
-            }}
-            if (!pathss.containsKey(spore.id())) {
-                pathss.put(spore.id(), ableToGo.getFirst());
             }
+
         }
         PathFinder.State nextPos = pathss.get(spore.id()).getFirst();
         pathss.get(spore.id()).removeFirst();
@@ -232,6 +236,17 @@ public class Bot {
             }
         }
         return true;
+    }
+
+    public int findMinNutrient(TeamGameState gameMessage) {
+        int min = Integer.MAX_VALUE;
+        for (int i = 0; i < gameMessage.world().map().nutrientGrid().length; i++){
+            int lineMin = Arrays.stream(gameMessage.world().map().nutrientGrid()[i]).min().getAsInt();
+            if (lineMin < min) {
+                min = lineMin;
+            }
+        }
+        return min;
     }
 
     public int distanceSporePosition(Position spore, Position position) {
