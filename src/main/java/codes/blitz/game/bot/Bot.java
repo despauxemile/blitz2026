@@ -39,7 +39,7 @@ public class Bot {
             }
         }
 
-        if (spawnerState == SpawnerState.MoreWeaker){
+        if (spawnerState == SpawnerState.MoreWeaker) {
             System.out.println("We are bursting");
         }
         if (weWinning && spawnerState == SpawnerState.FewerStronger) {
@@ -108,7 +108,7 @@ public class Bot {
         return ourSpores.stream()
                 .map(os -> {
                     var maxDist = enemySpores.stream().map(es -> {
-                        var dist = distanceSporePosition(os, es.position());
+                        var dist = distanceSporePosition(os.position(), es.position());
                         return dist;
                     }).max(Integer::compare).orElse(0);
 
@@ -173,6 +173,15 @@ public class Bot {
     }
 
     public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
+        if (gameMessage.world().map().nutrientGrid()[spore.position().x()][spore.position().y()] > 0) {
+            if (noSpawnerAroundPoint(gameMessage, spore.position())) {
+                TeamInfo ours = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+                if (ours.nutrients() > ours.nextSpawnerCost()) {
+                    return new SporeCreateSpawnerAction(spore.id());
+                }
+            }
+        }
+
         if (!pathss.containsKey(spore.id())) {
             List<PosNutrient> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
             List<List<PathFinder.State>> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
@@ -205,8 +214,21 @@ public class Bot {
         return new SporeMoveToAction(spore.id(), new Position(nextPos.x, nextPos.y));
     }
 
-    public int distanceSporePosition(Spore spore, Position position) {
-        return Math.abs(spore.position().x() - position.x()) + Math.abs(spore.position().y() - position.y());
+    private boolean noSpawnerAroundPoint(TeamGameState gameMessage, Position position) {
+        int x = position.x();
+        int y = position.y();
+        TeamInfo ours = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+        for (Spawner spawner : ours.spawners()) {
+            int dist = distanceSporePosition(position, spawner.position());
+            if (dist < 3 && dist > 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public int distanceSporePosition(Position spore, Position position) {
+        return Math.abs(spore.x() - position.x()) + Math.abs(spore.y() - position.y());
     }
 
     public List<PathFinder.State> shortestPathRealCost(TeamGameState gameState, Position start, Position going) {
