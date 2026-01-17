@@ -32,8 +32,10 @@ public class PathFinder {
                 boolean isOurs = Objects.equals(gameMessage.world().ownershipGrid()[i][j], gameMessage.yourTeamId());
                 if (isOurs) {
                     grid[i][j] = 0;
-                } else {
+                } else if (gameMessage.world().biomassGrid()[i][j]!=0){
                     grid[i][j] = gameMessage.world().biomassGrid()[i][j];
+                }else{
+                    grid[i][j] = 1;
                 }
             }
         }

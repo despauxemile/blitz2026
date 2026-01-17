@@ -8,7 +8,7 @@ import java.util.*;
 public class Bot {
     Random random = new Random();
     static List<PosNutrient> sortedNutrient = new ArrayList<>();
-
+    static HashMap<String, List<PathFinder.State>> pathss = new HashMap<>();
     public Bot() {
         System.out.println("Initializing your super mega duper bot");
     }
@@ -127,12 +127,19 @@ public class Bot {
     }
 
     public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
-        List<PosNutrient> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
-        List<List<PathFinder.State>> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
-        if (ableToGo.isEmpty()) {
-            return new SporeMoveToAction(spore.id(), positionsSortedNutrient.getFirst().position);
+        if (!pathss.containsKey(spore.id())){
+            List<PosNutrient> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
+            List<List<PathFinder.State>> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
+            if (ableToGo.isEmpty()) {
+                return new SporeMoveToAction(spore.id(), positionsSortedNutrient.getFirst().position);
+            }
+            pathss.put(spore.id(), ableToGo.getFirst());
         }
-        PathFinder.State nextPos = ableToGo.getFirst().getFirst();
+        PathFinder.State nextPos = pathss.get(spore.id()).getFirst();
+        pathss.get(spore.id()).removeFirst();
+        if (pathss.get(spore.id()).isEmpty()){
+            pathss.remove(spore.id());
+        }
         return new SporeMoveToAction(spore.id(), new Position(nextPos.x, nextPos.y));
     }
 
