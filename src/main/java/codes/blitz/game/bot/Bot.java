@@ -35,4 +35,25 @@ public class Bot {
     // You can clearly do better than the random actions above. Have fun!!
     return actions;
   }
+
+  public List<Action> decideIfCreateSpawner(TeamGameState gameMessage){
+    List<Action> actions = new ArrayList<>();
+    TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+    if (myTeam.nextSpawnerCost() <= myTeam.nutrients()){
+      actions.add(new SporeCreateSpawnerAction(myTeam.spores().getFirst().id()));
+    }
+    return actions;
+  }
+
+  public String getIdSporeFurtherFromOtherTeam(){
+    return null;
+  }
+
+  public List<Action> determineActionAllSpore(TeamGameState gameMessage){
+    List<Action> actions = new ArrayList<>();
+    TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+    for () {
+      
+    }
+  }
 }
