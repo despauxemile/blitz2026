@@ -159,7 +159,6 @@ public class Bot {
         if (pathss.get(spore.id()).isEmpty()) {
             pathss.remove(spore.id());
         }
-        System.out.println("Going to highest reachable value : " + nextPos.toString());
         return new SporeMoveToAction(spore.id(), new Position(nextPos.x, nextPos.y));
     }
 
@@ -171,7 +170,7 @@ public class Bot {
         return PathFinder.shortestPath(start, going, gameState);
     }
 
-    public int howMuchTeamProduce(TeamGameState gameMessage, String teamId) {
+    public static int howMuchTeamProduce(TeamGameState gameMessage, String teamId) {
         int tot = 0;
         for (int i = 0; i < gameMessage.world().ownershipGrid().length; i++) {
             for (int j = 0; j < gameMessage.world().ownershipGrid()[0].length; j++) {
@@ -183,7 +182,11 @@ public class Bot {
         return tot;
     }
 
-    public String advantagedTeam(TeamGameState gameState) {
+    public static boolean weHaveAdvantage(TeamGameState gameState) {
+        return Objects.equals(advantagedTeam(gameState), gameState.yourTeamId());
+    }
+
+    public static String advantagedTeam(TeamGameState gameState) {
         String maxiS = gameState.yourTeamId();
         int maxi = 0;
         for (String teams : gameState.teamIds()) {
