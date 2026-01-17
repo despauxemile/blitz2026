@@ -5,10 +5,13 @@ import codes.blitz.game.generated.*;
 import java.sql.Array;
 import java.util.*;
 
+enum SpawnerState{FewerStronger, MoreWeaker}
+
 public class Bot {
     Random random = new Random();
     static List<PosNutrient> sortedNutrient = new ArrayList<>();
     static HashMap<String, List<PathFinder.State>> pathss = new HashMap<>();
+    static SpawnerState spawnerState = SpawnerState.FewerStronger;
     public Bot() {
         System.out.println("Initializing your super mega duper bot");
     }
@@ -23,8 +26,11 @@ public class Bot {
 
         if (decideIfCreateSpawner(gameMessage)) {
             actions.add(new SporeCreateSpawnerAction(getIdSporeFurtherFromOtherTeam(gameMessage)));
-        } else if (decideIfSpawnSpore(gameMessage)) {
-            actions.add(new SpawnerProduceSporeAction(myTeam.spawners().getFirst().id(), myTeam.nutrients()));
+        }
+        for (int i = 0; i < myTeam.spawners().size(); i++) {
+            if (spawnerState == SpawnerState.MoreWeaker || decideIfSpawnSpore(gameMessage)) {
+                actions.add(new SpawnerProduceSporeAction(myTeam.spawners().getFirst().id(), myTeam.nutrients()/myTeam.spawners().size()));
+            }
         }
 
         actions.addAll(determineActionAllSpore(gameMessage));
@@ -34,7 +40,7 @@ public class Bot {
 
     public boolean decideIfCreateSpawner(TeamGameState gameMessage) {
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
-        if (myTeam.spawners().isEmpty()) {
+        if (myTeam.spawners().isEmpty() || (spawnerState == SpawnerState.MoreWeaker && myTeam.spawners().size() < 1)) {
             return true;
         }
         return false;
@@ -45,10 +51,9 @@ public class Bot {
         if (myTeam.spores().isEmpty())
             return true;
         Spore strongest = getStrongestSpore(gameMessage);
-        if (myTeam.nutrients() > 15)
-            return true;
         return myTeam.nutrients() > strongest.biomass();
     }
+
 
     public Spore getStrongestSpore(TeamGameState gameMessage) {
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
