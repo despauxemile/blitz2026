@@ -22,7 +22,7 @@ public class Bot {
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
 
         if (decideIfCreateSpawner(gameMessage)) {
-            actions.add(new SporeCreateSpawnerAction(getIdSporeFurtherFromOtherTeam()));
+            actions.add(new SporeCreateSpawnerAction(getIdSporeFurtherFromOtherTeam(gameMessage)));
         } else if (decideIfSpawnSpore(gameMessage)) {
             actions.add(new SpawnerProduceSporeAction(myTeam.spawners().getFirst().id(), myTeam.nutrients()));
         }
