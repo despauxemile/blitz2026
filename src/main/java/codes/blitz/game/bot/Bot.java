@@ -2,10 +2,12 @@ package codes.blitz.game.bot;
 
 import codes.blitz.game.generated.*;
 
+import java.sql.Array;
 import java.util.*;
 
 public class Bot {
     Random random = new Random();
+    static List<PosNutrient> sortedNutrient = new ArrayList<>();
 
     public Bot() {
         System.out.println("Initializing your super mega duper bot");
@@ -66,39 +68,38 @@ public class Bot {
 
     //transformer ca en liste des plus nutrimenté
     // ensuite les spores décident s'ils sont capables de s'y rendre
-    public List<Position> determineCellMostNutrient(TeamGameState gameMessage) {
-        List<Position> positions = new ArrayList<>();
+    public List<PosNutrient> determineCellMostNutrient(TeamGameState gameMessage) {
+
+        if (!sortedNutrient.isEmpty()){
+            return sortedNutrient;
+        }
+
+        List<PosNutrient> positions = new ArrayList<>();
         int width = gameMessage.world().map().width();
         int height = gameMessage.world().map().height();
+
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
-                int liveValue = gameMessage.world().map().nutrientGrid()[i][j];
-                if (positions.isEmpty()) {
-                    positions.addFirst(new Position(i, j));
-                } else {
-                    for (int k = 0; k < positions.size(); k++) {
-                        Position position = positions.get(k);
-                        if (liveValue < gameMessage.world().map().nutrientGrid()[position.x()][position.y()]) {
-                            positions.add(k, new Position(i, j));
-                        }
-                    }
-                }
+                positions.add(new PosNutrient(new Position(i,j), gameMessage.world().map().nutrientGrid()[i][j]));
             }
         }
-        return positions;
+        positions.sort(Comparator.comparingInt(s -> s.nutrient));
+        return positions.reversed();
+
     }
 
     /**
      * Assume que la liste de position passée est triée
      * en fonction que le premier est la position avec le plus de nutriments
      */
-    public List<Position> determineMostNutrientAbleToGo(TeamGameState gameMessage, Spore spore, List<Position> sortedNutrientPosition) {
-        List<Position> positions = new ArrayList<>();
-        for (Position position : sortedNutrientPosition) {
+    public List<PosNutrient> determineMostNutrientAbleToGo(TeamGameState gameMessage, Spore spore, List<PosNutrient> sortedNutrientPosition) {
+        List<PosNutrient> positions = new ArrayList<>();
+        for (PosNutrient posNutrient : sortedNutrientPosition) {
+            Position position = posNutrient.position;
             if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId())) {
                 int dist = distanceSporePosition(spore, position);
                 if (dist <= spore.biomass()) {
-                    positions.add(position);
+                    positions.add(posNutrient);
                 }
             }
         }
@@ -106,9 +107,12 @@ public class Bot {
     }
 
     public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
-        List<Position> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
-        List<Position> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
-        return new SporeMoveToAction(spore.id(), ableToGo.getFirst());
+        List<PosNutrient> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
+        List<PosNutrient> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
+        if (ableToGo.isEmpty()) {
+            return new SporeMoveToAction(spore.id(), positionsSortedNutrient.getFirst().position);
+        }
+        return new SporeMoveToAction(spore.id(), ableToGo.getFirst().position);
     }
 
     public int distanceSporePosition(Spore spore, Position position) {
