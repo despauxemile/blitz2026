@@ -165,7 +165,8 @@ public class Bot {
         List<List<PathFinder.State>> positions = new ArrayList<>();
         for (PosNutrient posNutrient : sortedNutrientPosition) {
             Position position = posNutrient.position;
-            if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId())) {
+            if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId()) && gameMessage.world().map().nutrientGrid()[position.x()][position.y()] > 0) {
+
                 List<PathFinder.State> shortest = shortestPathRealCost(gameMessage, spore.position(), position);
                 if (shortest.isEmpty()) {
                     continue;
@@ -200,13 +201,13 @@ public class Bot {
                 return new SporeMoveToAction(spore.id(), new Position(ranx, rany));
             }
             for (List<PathFinder.State> states : ableToGo) {
-                boolean already = false;
+                int already = 0;
                 for (List<PathFinder.State> objective : pathss.values()) {
                     if (objective.getLast().equals(states.getLast())) {
-                        already = true;
+                        already += 1;
                     }
                 }
-                if (!already) {
+                if ((already < 4) || (already < 6 && gameMessage.tick() < 50)) {
                     pathss.put(spore.id(), states);
                     break;
                 }
@@ -229,7 +230,7 @@ public class Bot {
         TeamInfo ours = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
         for (Spawner spawner : ours.spawners()) {
             int dist = distanceSporePosition(position, spawner.position());
-            if (dist < 3 && dist > 0) {
+            if (dist < gameMessage.world().map().height() / 5 ) {
                 return false;
             }
         }
