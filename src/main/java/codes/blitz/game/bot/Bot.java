@@ -130,9 +130,11 @@ public class Bot {
         List<PosNutrient> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
         List<List<PathFinder.State>> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
         if (ableToGo.isEmpty()) {
+            System.out.println("Defaulting to highest value : " + positionsSortedNutrient.getFirst().position.toString());
             return new SporeMoveToAction(spore.id(), positionsSortedNutrient.getFirst().position);
         }
         PathFinder.State nextPos = ableToGo.getFirst().getFirst();
+        System.out.println("Going to highest reachable value : " + nextPos.toString());
         return new SporeMoveToAction(spore.id(), new Position(nextPos.x, nextPos.y));
     }
 

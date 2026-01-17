@@ -15,6 +15,15 @@ public class PathFinder {
             this.y = y;
             this.cost = cost;
         }
+
+        @Override
+        public String toString() {
+            return "State{" +
+                    "x=" + x +
+                    ", y=" + y +
+                    ", cost=" + cost +
+                    '}';
+        }
     }
 
     public static List<State> shortestPath(
