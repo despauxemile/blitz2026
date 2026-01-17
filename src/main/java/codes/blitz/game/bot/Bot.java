@@ -13,6 +13,7 @@ public class Bot {
     static HashMap<String, List<PathFinder.State>> pathss = new HashMap<>();
     static SpawnerState spawnerState = SpawnerState.FewerStronger;
     static boolean weWinning = false;
+    static boolean first = true;
 
     public Bot() {
         System.out.println("Initializing your super mega duper bot");
@@ -26,6 +27,11 @@ public class Bot {
 
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
         weWinning = weHaveAdvantage(gameMessage);
+
+        if (first) {
+            actions.addAll(conceiveSpawnerFromNotJoinable(gameMessage));
+            first = false;
+        }
         HashMap<String, List<PathFinder.State>> pathsnew = new HashMap<>();
         for (Spore spor : gameMessage.world().spores()) {
             if (pathss.containsKey(spor.id())) {
@@ -52,6 +58,22 @@ public class Bot {
 
         actions.addAll(determineActionAllSpore(gameMessage));
 
+        return actions;
+    }
+
+    private List<Action> conceiveSpawnerFromNotJoinable(TeamGameState gameMessage) {
+        List<Action> actions = new ArrayList<>();
+        for (Spore spore : gameMessage.world().spores()) {
+            boolean canReachOne = false;
+            for (Spawner spawner : gameMessage.world().spawners()) {
+                if (shortestPathRealCost(gameMessage, spore.position(), spawner.position()).getLast().cost > spore.biomass()) {
+                    canReachOne = true;
+                }
+            }
+            if (!canReachOne) {
+                actions.add(new SporeCreateSpawnerAction(spore.id()));
+            }
+        }
         return actions;
     }
 
@@ -204,7 +226,7 @@ public class Bot {
     }
 
     public static boolean weHaveAdvantage(TeamGameState gameState) {
-        return Objects.equals(advantagedTeam(gameState), gameState.yourTeamId()) && gameState.tick() >= 50;
+        return Objects.equals(advantagedTeam(gameState), gameState.yourTeamId()) || gameState.tick() < 50;
     }
 
     public static String advantagedTeam(TeamGameState gameState) {
