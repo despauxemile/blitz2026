@@ -158,7 +158,8 @@ public class Bot {
         List<List<PathFinder.State>> positions = new ArrayList<>();
         for (PosNutrient posNutrient : sortedNutrientPosition) {
             Position position = posNutrient.position;
-            if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId())) {
+            if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId()) && gameMessage.world().map().nutrientGrid()[position.x()][position.y()] > 0) {
+
                 List<PathFinder.State> shortest = shortestPathRealCost(gameMessage, spore.position(), position);
                 if (shortest.isEmpty()) {
                     continue;
@@ -220,7 +221,7 @@ public class Bot {
         TeamInfo ours = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
         for (Spawner spawner : ours.spawners()) {
             int dist = distanceSporePosition(position, spawner.position());
-            if (dist < gameMessage.world().map().height() / 5 && dist > 0) {
+            if (dist < gameMessage.world().map().height() / 5 ) {
                 return false;
             }
         }
