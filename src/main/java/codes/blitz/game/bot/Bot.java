@@ -178,7 +178,7 @@ public class Bot {
                 }
                 int dist = shortest.getLast().cost;
                 positions.add(shortest);
-                
+
             }
         }
         return positions;
