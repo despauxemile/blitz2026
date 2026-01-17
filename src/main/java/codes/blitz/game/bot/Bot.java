@@ -28,6 +28,7 @@ public class Bot {
         }
 
         actions.addAll(determineActionAllSpore(gameMessage));
+
         return actions;
     }
 
@@ -53,8 +54,23 @@ public class Bot {
         return result.orElse(null);
     }
 
-    public String getIdSporeFurtherFromOtherTeam() {
-        return null;
+    public String getIdSporeFurtherFromOtherTeam(TeamGameState gameState) {
+        var ourTeam = gameState.yourTeamId();
+        List<Spore> ourSpores = gameState.world().spores().stream().filter(s -> s.teamId().equals(ourTeam)).toList();
+        List<Spore> enemySpores = gameState.world().spores().stream().filter(s -> !s.teamId().equals(ourTeam)).toList();
+
+        return ourSpores.stream()
+            .map(os -> {
+                var maxDist = enemySpores.stream().map(es -> {
+                    var dist = distanceSporePosition(os, es.position());
+                    return dist;
+                }).max(Integer::compare).orElse(0);
+
+                return new Pair<>(os, maxDist);
+            })
+            .max(Comparator.comparingInt(Pair::second))
+            .map(p -> p.first().id())
+            .orElse(null);
     }
 
     public List<Action> determineActionAllSpore(TeamGameState gameMessage) {
