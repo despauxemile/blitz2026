@@ -226,7 +226,7 @@ public class Bot {
     }
 
     public static boolean weHaveAdvantage(TeamGameState gameState) {
-        return (Objects.equals(advantagedTeam(gameState), gameState.yourTeamId()) && gameState.tick() >= 100) || gameState.tick() < 50;
+        return Objects.equals(advantagedTeam(gameState), gameState.yourTeamId()) || gameState.tick() < 50;
     }
 
     public static String advantagedTeam(TeamGameState gameState) {
