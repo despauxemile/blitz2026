@@ -57,10 +57,10 @@ public class Bot {
             if (spawnerState == SpawnerState.MoreWeaker || decideIfSpawnSpore(gameMessage)) {
                 if (gameMessage.tick() > 25 && !myTeam.spores().isEmpty())
                     bank += 1;
-                if (myTeam.spawners().size() >= 5){
-                    bank  = 0;
+                if (myTeam.spawners().size() >= 5) {
+                    bank = 0;
                 }
-                actions.add(new SpawnerProduceSporeAction(myTeam.spawners().get(i).id(), (myTeam.nutrients()-bank) / myTeam.spawners().size()));
+                actions.add(new SpawnerProduceSporeAction(myTeam.spawners().get(i).id(), (myTeam.nutrients() - bank) / myTeam.spawners().size()));
             }
         }
 
@@ -166,23 +166,22 @@ public class Bot {
      */
     public List<List<PathFinder.State>> determineMostNutrientAbleToGo(TeamGameState gameMessage, Spore spore, List<PosNutrient> sortedNutrientPosition) {
         List<List<PathFinder.State>> positions = new ArrayList<>();
-        for (int i = 0; i < Math.min(sortedNutrientPosition.size(),10);i++) {
+        int i = 0;
+        while (i < sortedNutrientPosition.size()) {
             PosNutrient posNutrient = sortedNutrientPosition.get(i);
+            i++;
             Position position = posNutrient.position;
-            if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId()) && gameMessage.world().map().nutrientGrid()[position.x()][position.y()] > 0) {
+            if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId())) {
                 List<PathFinder.State> shortest = shortestPathRealCost(gameMessage, spore.position(), position);
-                if (shortest.isEmpty() || gameMessage.world().map().nutrientGrid()[shortest.getLast().x][shortest.getLast().y] == 0) {
+                if (shortest.isEmpty()) {
                     continue;
                 }
                 int dist = shortest.getLast().cost;
-                if (dist <= spore.biomass()) {
-                    positions.add(shortest);
-                }
+                positions.add(shortest);
+                
             }
         }
-        return positions.stream()
-                .sorted(Comparator.comparingInt(List::size))
-                .toList();
+        return positions;
     }
 
     public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
@@ -233,7 +232,7 @@ public class Bot {
         TeamInfo ours = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
         for (Spawner spawner : ours.spawners()) {
             int dist = distanceSporePosition(position, spawner.position());
-            if (dist < gameMessage.world().map().height() / 5 ) {
+            if (dist < 5) {
                 return false;
             }
         }
