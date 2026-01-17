@@ -35,7 +35,8 @@ public class Bot {
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
         if (myTeam.nextSpawnerCost() <= myTeam.nutrients()) {
             return true;
-        };
+        }
+        ;
         return false;
     }
 
@@ -76,7 +77,28 @@ public class Bot {
         return positions;
     }
 
+    /**
+     * Assume que la liste de position passée est triée
+     * en fonction que le premier est la position avec le plus de nutriments
+     */
+    public List<Position> determineMostNutrientAbleToGo(Spore spore, List<Position> sortedNutrientPosition) {
+        List<Position> positions = new ArrayList<>();
+        for (Position position : sortedNutrientPosition) {
+            int dist = distanceSporePosition(spore, position);
+            if (dist <= spore.biomass()) {
+                positions.add(position);
+            }
+        }
+        return positions;
+    }
+
     public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
-        return new SporeMoveToAction(spore.id(), determineCellMostNutrient(gameMessage).getFirst());
+        List<Position> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
+        List<Position> ableToGo = determineMostNutrientAbleToGo(spore, positionsSortedNutrient);
+        return new SporeMoveToAction(spore.id(), ableToGo.getFirst());
+    }
+
+    public int distanceSporePosition(Spore spore, Position position) {
+        return Math.abs(spore.position().x() - position.x()) + Math.abs(spore.position().y() - position.y());
     }
 }
