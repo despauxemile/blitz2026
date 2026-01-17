@@ -93,12 +93,14 @@ public class Bot {
      * Assume que la liste de position passée est triée
      * en fonction que le premier est la position avec le plus de nutriments
      */
-    public List<Position> determineMostNutrientAbleToGo(Spore spore, List<Position> sortedNutrientPosition) {
+    public List<Position> determineMostNutrientAbleToGo(TeamGameState gameMessage, Spore spore, List<Position> sortedNutrientPosition) {
         List<Position> positions = new ArrayList<>();
         for (Position position : sortedNutrientPosition) {
-            int dist = distanceSporePosition(spore, position);
-            if (dist <= spore.biomass()) {
-                positions.add(position);
+            if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId())) {
+                int dist = distanceSporePosition(spore, position);
+                if (dist <= spore.biomass()) {
+                    positions.add(position);
+                }
             }
         }
         return positions;
@@ -106,7 +108,7 @@ public class Bot {
 
     public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
         List<Position> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
-        List<Position> ableToGo = determineMostNutrientAbleToGo(spore, positionsSortedNutrient);
+        List<Position> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
         return new SporeMoveToAction(spore.id(), ableToGo.getFirst());
     }
 
