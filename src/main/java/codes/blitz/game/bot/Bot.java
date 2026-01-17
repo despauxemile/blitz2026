@@ -5,7 +5,7 @@ import codes.blitz.game.generated.*;
 import java.sql.Array;
 import java.util.*;
 
-enum SpawnerState{FewerStronger, MoreWeaker}
+enum SpawnerState {FewerStronger, MoreWeaker}
 
 public class Bot {
     Random random = new Random();
@@ -24,6 +24,12 @@ public class Bot {
         List<Action> actions = new ArrayList<>();
 
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+        HashMap<String, List<PathFinder.State>> pathsnew = new HashMap<>();
+        for (Spore spor : gameMessage.world().spores()) {
+            if (pathss.containsKey(spor.id())) {
+                pathsnew.put(spor.id(), pathss.get(spor.id()));
+            }
+        }
 
         if (weHaveAdvantage(gameMessage) && spawnerState == SpawnerState.FewerStronger) {
             System.out.println("We have advantage");
@@ -35,7 +41,7 @@ public class Bot {
         }
         for (int i = 0; i < myTeam.spawners().size(); i++) {
             if (spawnerState == SpawnerState.MoreWeaker || decideIfSpawnSpore(gameMessage)) {
-                actions.add(new SpawnerProduceSporeAction(myTeam.spawners().get(i).id(), myTeam.nutrients()/myTeam.spawners().size()));
+                actions.add(new SpawnerProduceSporeAction(myTeam.spawners().get(i).id(), myTeam.nutrients() / myTeam.spawners().size()));
             }
         }
 
