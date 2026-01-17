@@ -35,7 +35,7 @@ public class Bot {
         }
         for (int i = 0; i < myTeam.spawners().size(); i++) {
             if (spawnerState == SpawnerState.MoreWeaker || decideIfSpawnSpore(gameMessage)) {
-                actions.add(new SpawnerProduceSporeAction(myTeam.spawners().getFirst().id(), myTeam.nutrients()/myTeam.spawners().size()));
+                actions.add(new SpawnerProduceSporeAction(myTeam.spawners().get(i).id(), myTeam.nutrients()/myTeam.spawners().size()));
             }
         }
 
