@@ -204,6 +204,7 @@ public class Bot {
                 int rany = random.nextInt(gameMessage.world().map().height());
                 return new SporeMoveToAction(spore.id(), new Position(ranx, rany));
             }
+            if (!weWinning){
             for (List<PathFinder.State> states : ableToGo) {
                 int already = 0;
                 for (List<PathFinder.State> objective : pathss.values()) {
@@ -211,11 +212,11 @@ public class Bot {
                         already += 1;
                     }
                 }
-                if ((already < 4) || (already < 6 && gameMessage.tick() < 50)) {
+                if ((already < 15)) {
                     pathss.put(spore.id(), states);
                     break;
                 }
-            }
+            }}
             if (!pathss.containsKey(spore.id())) {
                 pathss.put(spore.id(), ableToGo.getFirst());
             }
