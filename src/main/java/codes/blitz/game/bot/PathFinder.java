@@ -5,7 +5,6 @@ import codes.blitz.game.generated.TeamGameState;
 
 import java.util.*;
 
-import static codes.blitz.game.bot.Bot.weHaveAdvantage;
 import static codes.blitz.game.bot.Bot.weWinning;
 
 public class PathFinder {

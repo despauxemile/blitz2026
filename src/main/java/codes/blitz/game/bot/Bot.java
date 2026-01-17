@@ -2,134 +2,156 @@ package codes.blitz.game.bot;
 
 import codes.blitz.game.generated.*;
 
-import java.sql.Array;
 import java.util.*;
 
-enum SpawnerState {FewerStronger, MoreWeaker}
+enum SpawnerState {
+    FEWER_STRONGER,
+    MORE_WEAKER
+}
 
 public class Bot {
-    Random random = new Random();
-    static List<PosNutrient> sortedNutrient = new ArrayList<>();
-    static HashMap<String, List<PathFinder.State>> pathss = new HashMap<>();
-    static SpawnerState spawnerState = SpawnerState.FewerStronger;
-    static boolean weWinning = false;
-    static int bank = 0;
-    static boolean first = true;
+    static private final Random random = new Random();
+    static private final List<PosNutrient> sortedNutrient = new ArrayList<>();
+    static private final HashMap<String, List<PathFinder.State>> paths = new HashMap<>();
+
+    static private SpawnerState spawnerState = SpawnerState.FEWER_STRONGER;
+    static public boolean weWinning = false;
+    static private int bank = 0;
+    static private boolean firstTick = true;
 
     public Bot() {
         System.out.println("Initializing your super mega duper bot");
     }
 
-    /*
-     * Here is where the magic happens, for now the moves are not very good. I bet you can do better ;)
-     */
     public List<Action> getActions(TeamGameState gameMessage) {
         List<Action> actions = new ArrayList<>();
-
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
         weWinning = weHaveAdvantage(gameMessage);
 
-        if (first) {
-            actions.addAll(conceiveSpawnerFromNotJoinable(gameMessage));
-            first = false;
+        if (firstTick) {
+            actions.addAll(createSpawnersForIsolatedSpores(gameMessage));
+            firstTick = false;
         }
-        HashMap<String, List<PathFinder.State>> pathsnew = new HashMap<>();
-        for (Spore spor : gameMessage.world().spores()) {
-            if (pathss.containsKey(spor.id())) {
-                pathsnew.put(spor.id(), pathss.get(spor.id()));
+
+        cleanupDeadSporePaths(gameMessage);
+
+        if (weWinning && spawnerState == SpawnerState.FEWER_STRONGER) {
+            System.out.println("We have advantage - switching to burst mode");
+            spawnerState = SpawnerState.MORE_WEAKER;
+        }
+
+        if (spawnerState == SpawnerState.MORE_WEAKER) {
+            System.out.println("Burst mode active");
+        }
+
+        if (shouldCreateSpawner(gameMessage)) {
+            String sporeId = getIdSporeFurthestFromEnemies(gameMessage);
+            if (sporeId != null) {
+                bank = Math.max(0, bank - myTeam.nextSpawnerCost());
+                actions.add(new SporeCreateSpawnerAction(sporeId));
             }
         }
 
-        if (spawnerState == SpawnerState.MoreWeaker) {
-            System.out.println("We are bursting");
-        }
-        if (weWinning && spawnerState == SpawnerState.FewerStronger) {
-            System.out.println("We have advantage");
-            spawnerState = SpawnerState.MoreWeaker;
-        }
-
-        if (decideIfCreateSpawner(gameMessage)) {
-            if (bank > 0)
-                bank -= myTeam.nextSpawnerCost();
-            actions.add(new SporeCreateSpawnerAction(getIdSporeFurtherFromOtherTeam(gameMessage)));
-        }
-        for (int i = 0; i < myTeam.spawners().size(); i++) {
-            if (spawnerState == SpawnerState.MoreWeaker || decideIfSpawnSpore(gameMessage)) {
-                if (gameMessage.tick() > 25 && !myTeam.spores().isEmpty())
+        for (Spawner spawner : myTeam.spawners()) {
+            if (spawnerState == SpawnerState.MORE_WEAKER || shouldSpawnSpore(gameMessage)) {
+                if (gameMessage.tick() > 25 && !myTeam.spores().isEmpty()) {
                     bank += 1;
+                }
                 if (myTeam.spawners().size() >= 5) {
                     bank = 0;
                 }
-                actions.add(new SpawnerProduceSporeAction(myTeam.spawners().get(i).id(), (myTeam.nutrients() - bank) / myTeam.spawners().size()));
+                int biomassPerSpawner = Math.max(0, (myTeam.nutrients() - bank) / myTeam.spawners().size());
+                actions.add(new SpawnerProduceSporeAction(spawner.id(), biomassPerSpawner));
             }
         }
 
-        actions.addAll(determineActionAllSpore(gameMessage));
+        actions.addAll(determineActionsForAllSpores(gameMessage));
 
         return actions;
     }
 
-    private List<Action> conceiveSpawnerFromNotJoinable(TeamGameState gameMessage) {
+    private List<Action> createSpawnersForIsolatedSpores(TeamGameState gameMessage) {
         List<Action> actions = new ArrayList<>();
+        TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+
         for (Spore spore : gameMessage.world().spores()) {
-            boolean canReachOne = false;
+            if (!spore.teamId().equals(gameMessage.yourTeamId())) {
+                continue;
+            }
+
+            boolean canReachAnySpawner = false;
             for (Spawner spawner : gameMessage.world().spawners()) {
-                if (shortestPathRealCost(gameMessage, spore.position(), spawner.position()).getLast().cost > spore.biomass()) {
-                    canReachOne = true;
+                List<PathFinder.State> path = shortestPathRealCost(gameMessage, spore.position(), spawner.position());
+                if (!path.isEmpty() && path.getLast().cost <= spore.biomass()) {
+                    canReachAnySpawner = true;
+                    break;
                 }
             }
-            if (!canReachOne) {
-                if (bank > 0)
-                    bank -= gameMessage.world().teamInfos().get(gameMessage.yourTeamId()).nextSpawnerCost();
+
+            if (!canReachAnySpawner) {
+                bank = Math.max(0, bank - myTeam.nextSpawnerCost());
                 actions.add(new SporeCreateSpawnerAction(spore.id()));
             }
         }
         return actions;
     }
 
-    public boolean decideIfCreateSpawner(TeamGameState gameMessage) {
+    private void cleanupDeadSporePaths(TeamGameState gameMessage) {
+        Set<String> activeSporeIds = new HashSet<>();
+        for (Spore spore : gameMessage.world().spores()) {
+            activeSporeIds.add(spore.id());
+        }
+        paths.keySet().retainAll(activeSporeIds);
+    }
+
+    private boolean shouldCreateSpawner(TeamGameState gameMessage) {
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
-        if (myTeam.spawners().isEmpty()) {
+        return myTeam.spawners().isEmpty();
+    }
+
+    private boolean shouldSpawnSpore(TeamGameState gameMessage) {
+        TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+        if (myTeam.spores().isEmpty()) {
             return true;
         }
-        return false;
-    }
-
-    public boolean decideIfSpawnSpore(TeamGameState gameMessage) {
-        TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
-        if (myTeam.spores().isEmpty())
-            return true;
         Spore strongest = getStrongestSpore(gameMessage);
-        return myTeam.nutrients() > strongest.biomass();
+        return strongest != null && myTeam.nutrients() > strongest.biomass();
     }
 
-
-    public Spore getStrongestSpore(TeamGameState gameMessage) {
+    private Spore getStrongestSpore(TeamGameState gameMessage) {
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
-        Optional<Spore> result = myTeam.spores().stream().max(Comparator.comparing(Spore::biomass));
-        return result.orElse(null);
+        return myTeam.spores().stream()
+                .max(Comparator.comparing(Spore::biomass))
+                .orElse(null);
     }
 
-    public String getIdSporeFurtherFromOtherTeam(TeamGameState gameState) {
-        var ourTeam = gameState.yourTeamId();
-        List<Spore> ourSpores = gameState.world().spores().stream().filter(s -> s.teamId().equals(ourTeam)).toList();
-        List<Spore> enemySpores = gameState.world().spores().stream().filter(s -> !s.teamId().equals(ourTeam)).toList();
+    private String getIdSporeFurthestFromEnemies(TeamGameState gameState) {
+        String ourTeam = gameState.yourTeamId();
+        List<Spore> ourSpores = gameState.world().spores().stream()
+                .filter(s -> s.teamId().equals(ourTeam))
+                .toList();
+        List<Spore> enemySpores = gameState.world().spores().stream()
+                .filter(s -> !s.teamId().equals(ourTeam))
+                .toList();
+
+        if (ourSpores.isEmpty()) {
+            return null;
+        }
 
         return ourSpores.stream()
                 .map(os -> {
-                    var maxDist = enemySpores.stream().map(es -> {
-                        var dist = distanceSporePosition(os.position(), es.position());
-                        return dist;
-                    }).max(Integer::compare).orElse(0);
-
-                    return new Pair<>(os, maxDist);
+                    int minDistToEnemy = enemySpores.stream()
+                            .mapToInt(es -> distanceBetweenPositions(os.position(), es.position()))
+                            .min()
+                            .orElse(Integer.MAX_VALUE);
+                    return new Pair<>(os, minDistToEnemy);
                 })
                 .max(Comparator.comparingInt(Pair::second))
                 .map(p -> p.first().id())
                 .orElse(null);
     }
 
-    public List<Action> determineActionAllSpore(TeamGameState gameMessage) {
+    private List<Action> determineActionsForAllSpores(TeamGameState gameMessage) {
         List<Action> actions = new ArrayList<>();
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
         for (Spore spore : myTeam.spores()) {
@@ -138,10 +160,7 @@ public class Bot {
         return actions;
     }
 
-    //transformer ca en liste des plus nutrimenté
-    // ensuite les spores décident s'ils sont capables de s'y rendre
-    public List<PosNutrient> determineCellMostNutrient(TeamGameState gameMessage) {
-
+    private List<PosNutrient> getCellsSortedByNutrient(TeamGameState gameMessage) {
         if (!sortedNutrient.isEmpty()) {
             return sortedNutrient;
         }
@@ -152,129 +171,165 @@ public class Bot {
 
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
-                positions.add(new PosNutrient(new Position(i, j), gameMessage.world().map().nutrientGrid()[i][j]));
+                positions.add(new PosNutrient(
+                        new Position(i, j),
+                        gameMessage.world().map().nutrientGrid()[i][j]
+                ));
             }
         }
-        positions.sort(Comparator.comparingInt(s -> s.nutrient));
-        return positions.reversed();
 
+        positions.sort(Comparator.comparingInt(p -> -p.nutrient));
+        sortedNutrient.addAll(positions);
+        return sortedNutrient;
     }
 
-    /**
-     * Assume que la liste de position passée est triée
-     * en fonction que le premier est la position avec le plus de nutriments
-     */
-    public List<List<PathFinder.State>> determineMostNutrientAbleToGo(TeamGameState gameMessage, Spore spore, List<PosNutrient> sortedNutrientPosition) {
-        List<List<PathFinder.State>> positions = new ArrayList<>();
-        int i = 0;
-        while (i < sortedNutrientPosition.size()) {
-            PosNutrient posNutrient = sortedNutrientPosition.get(i);
-            i++;
+    private List<List<PathFinder.State>> findReachableNutrientCells(
+            TeamGameState gameMessage,
+            Spore spore,
+            List<PosNutrient> sortedNutrientPositions) {
+
+        List<List<PathFinder.State>> reachablePaths = new ArrayList<>();
+        String ourTeamId = gameMessage.yourTeamId();
+
+        for (PosNutrient posNutrient : sortedNutrientPositions) {
             Position position = posNutrient.position;
-            if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId())) {
-                List<PathFinder.State> shortest = shortestPathRealCost(gameMessage, spore.position(), position);
-                if (shortest.isEmpty()) {
-                    continue;
-                }
-                int dist = shortest.getLast().cost;
-                positions.add(shortest);
+            String owner = gameMessage.world().ownershipGrid()[position.x()][position.y()];
 
+            if (!Objects.equals(owner, ourTeamId)) {
+                List<PathFinder.State> path = shortestPathRealCost(gameMessage, spore.position(), position);
+                if (!path.isEmpty()) {
+                    reachablePaths.add(path);
+                }
             }
         }
-        return positions;
+        return reachablePaths;
     }
 
-    public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
-        if (gameMessage.world().map().nutrientGrid()[spore.position().x()][spore.position().y()] > 0) {
-            if (noSpawnerAroundPoint(gameMessage, spore.position())) {
-                TeamInfo ours = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
-                if (ours.nutrients() > ours.nextSpawnerCost()) {
-                    if (bank > 0)
-                        bank -= ours.nextSpawnerCost();
-                    return new SporeCreateSpawnerAction(spore.id());
-                }
-            }
-        }
+    private Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
+        Position sporePos = spore.position();
+        int nutrientAtPosition = gameMessage.world().map().nutrientGrid()[sporePos.x()][sporePos.y()];
 
-        if (!pathss.containsKey(spore.id())) {
-            List<PosNutrient> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
-            List<List<PathFinder.State>> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
-            if (ableToGo.isEmpty()) {
-                int ranx = random.nextInt(gameMessage.world().map().width());
-                int rany = random.nextInt(gameMessage.world().map().height());
-                return new SporeMoveToAction(spore.id(), new Position(ranx, rany));
-            }
-            if (!weWinning){
-            for (List<PathFinder.State> states : ableToGo) {
-                int already = 0;
-                for (List<PathFinder.State> objective : pathss.values()) {
-                    if (objective.getLast().equals(states.getLast())) {
-                        already += 1;
-                    }
-                }
-                if ((already < 15)) {
-                    pathss.put(spore.id(), states);
-                    break;
-                }
-            }}
-            if (!pathss.containsKey(spore.id())) {
-                pathss.put(spore.id(), ableToGo.getFirst());
+        if (nutrientAtPosition > 0 && isGoodSpawnerLocation(gameMessage, sporePos)) {
+            TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+            if (myTeam.nutrients() > myTeam.nextSpawnerCost()) {
+                bank = Math.max(0, bank - myTeam.nextSpawnerCost());
+                return new SporeCreateSpawnerAction(spore.id());
             }
         }
-        PathFinder.State nextPos = pathss.get(spore.id()).getFirst();
-        pathss.get(spore.id()).removeFirst();
-        if (pathss.get(spore.id()).isEmpty()) {
-            pathss.remove(spore.id());
+        List<PosNutrient> p = getCellsSortedByNutrient(gameMessage);
+        for (PosNutrient posNutrient : p) {
+            if (!Objects.equals(gameMessage.world().ownershipGrid()[posNutrient.position.x()][posNutrient.position.y()], gameMessage.yourTeamId())) {
+                return new SporeMoveToAction(spore.id(), posNutrient.position);
+            }
         }
-        return new SporeMoveToAction(spore.id(), new Position(nextPos.x, nextPos.y));
+        return new SporeMoveToAction(spore.id(), getCellsSortedByNutrient(gameMessage).getFirst().position);
+//        if (!paths.containsKey(spore.id())) {
+//            assignPathToSpore(gameMessage, spore);
+//        }
+//
+//        if (!paths.containsKey(spore.id())) {
+//            return moveToRandomPosition(gameMessage, spore);
+//        }
+//
+//        PathFinder.State nextPos = paths.get(spore.id()).removeFirst();
+//        if (paths.get(spore.id()).isEmpty()) {
+//            paths.remove(spore.id());
+//        }
+//
+//        return new SporeMoveToAction(spore.id(), new Position(nextPos.x, nextPos.y));
     }
 
-    private boolean noSpawnerAroundPoint(TeamGameState gameMessage, Position position) {
-        TeamInfo ours = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
-        for (Spawner spawner : ours.spawners()) {
-            int dist = distanceSporePosition(position, spawner.position());
-            if (dist < 5) {
+    private void assignPathToSpore(TeamGameState gameMessage, Spore spore) {
+        List<PosNutrient> sortedPositions = getCellsSortedByNutrient(gameMessage);
+        List<List<PathFinder.State>> reachablePaths = findReachableNutrientCells(gameMessage, spore, sortedPositions);
+
+
+        if (reachablePaths.isEmpty()) {
+            return;
+        }
+
+        if (!weWinning) {
+            for (List<PathFinder.State> candidatePath : reachablePaths) {
+                int sporesTargetingSameGoal = countSporesWithSameGoal(candidatePath);
+                if (sporesTargetingSameGoal < 15) {
+                    paths.put(spore.id(), new ArrayList<>(candidatePath));
+                    return;
+                }
+            }
+        }
+
+        paths.put(spore.id(), new ArrayList<>(reachablePaths.getFirst()));
+    }
+
+    private int countSporesWithSameGoal(List<PathFinder.State> candidatePath) {
+        PathFinder.State candidateGoal = candidatePath.getLast();
+        int count = 0;
+        for (List<PathFinder.State> existingPath : paths.values()) {
+            if (existingPath.getLast().equals(candidateGoal)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private Action moveToRandomPosition(TeamGameState gameMessage, Spore spore) {
+        int randomX = random.nextInt(gameMessage.world().map().width());
+        int randomY = random.nextInt(gameMessage.world().map().height());
+        return new SporeMoveToAction(spore.id(), new Position(randomX, randomY));
+    }
+
+    private boolean isGoodSpawnerLocation(TeamGameState gameMessage, Position position) {
+        TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+        for (Spawner spawner : myTeam.spawners()) {
+            if (distanceBetweenPositions(position, spawner.position()) < 5) {
                 return false;
             }
         }
         return true;
     }
 
-    public int distanceSporePosition(Position spore, Position position) {
-        return Math.abs(spore.x() - position.x()) + Math.abs(spore.y() - position.y());
+    private int distanceBetweenPositions(Position pos1, Position pos2) {
+        return Math.abs(pos1.x() - pos2.x()) + Math.abs(pos1.y() - pos2.y());
     }
 
-    public List<PathFinder.State> shortestPathRealCost(TeamGameState gameState, Position start, Position going) {
-        return PathFinder.shortestPath(start, going, gameState);
+    private List<PathFinder.State> shortestPathRealCost(TeamGameState gameState, Position start, Position goal) {
+        return PathFinder.shortestPath(start, goal, gameState);
     }
 
-    public static int howMuchTeamProduce(TeamGameState gameMessage, String teamId) {
-        int tot = 0;
-        for (int i = 0; i < gameMessage.world().ownershipGrid().length; i++) {
-            for (int j = 0; j < gameMessage.world().ownershipGrid()[0].length; j++) {
-                if (Objects.equals(gameMessage.world().ownershipGrid()[i][j], teamId)) {
-                    tot += gameMessage.world().map().nutrientGrid()[i][j];
+    private static int calculateTeamProduction(TeamGameState gameMessage, String teamId) {
+        int totalProduction = 0;
+        String[][] ownershipGrid = gameMessage.world().ownershipGrid();
+        int[][] nutrientGrid = gameMessage.world().map().nutrientGrid();
+
+        for (int i = 0; i < ownershipGrid.length; i++) {
+            for (int j = 0; j < ownershipGrid[0].length; j++) {
+                if (Objects.equals(ownershipGrid[i][j], teamId)) {
+                    totalProduction += nutrientGrid[i][j];
                 }
             }
         }
-        return tot;
+        return totalProduction;
     }
 
-    public static boolean weHaveAdvantage(TeamGameState gameState) {
-        return Objects.equals(advantagedTeam(gameState), gameState.yourTeamId()) || gameState.tick() < 50;
+    private static boolean weHaveAdvantage(TeamGameState gameState) {
+        return Objects.equals(getLeadingTeam(gameState), gameState.yourTeamId())
+                || gameState.tick() < 50;
     }
 
-    public static String advantagedTeam(TeamGameState gameState) {
-        String maxiS = gameState.yourTeamId();
-        int maxi = 0;
-        for (String teams : gameState.teamIds()) {
-            if (teams.equals(gameState.constants().neutralTeamId())) {
+    private static String getLeadingTeam(TeamGameState gameState) {
+        String leadingTeam = gameState.yourTeamId();
+        int maxProduction = 0;
+
+        for (String teamId : gameState.teamIds()) {
+            if (teamId.equals(gameState.constants().neutralTeamId())) {
                 continue;
             }
-            if (maxi < howMuchTeamProduce(gameState, teams)) {
-                maxiS = teams;
+            int production = calculateTeamProduction(gameState, teamId);
+            if (production > maxProduction) {
+                maxProduction = production;
+                leadingTeam = teamId;
             }
         }
-        return maxiS;
+        return leadingTeam;
     }
 }
