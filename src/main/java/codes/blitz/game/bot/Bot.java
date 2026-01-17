@@ -12,6 +12,7 @@ public class Bot {
     static List<PosNutrient> sortedNutrient = new ArrayList<>();
     static HashMap<String, List<PathFinder.State>> pathss = new HashMap<>();
     static SpawnerState spawnerState = SpawnerState.FewerStronger;
+
     public Bot() {
         System.out.println("Initializing your super mega duper bot");
     }
@@ -23,6 +24,11 @@ public class Bot {
         List<Action> actions = new ArrayList<>();
 
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+
+        if (weHaveAdvantage(gameMessage) && spawnerState == SpawnerState.FewerStronger) {
+            System.out.println("We have advantage");
+            spawnerState = SpawnerState.MoreWeaker;
+        }
 
         if (decideIfCreateSpawner(gameMessage)) {
             actions.add(new SporeCreateSpawnerAction(getIdSporeFurtherFromOtherTeam(gameMessage)));
@@ -67,17 +73,17 @@ public class Bot {
         List<Spore> enemySpores = gameState.world().spores().stream().filter(s -> !s.teamId().equals(ourTeam)).toList();
 
         return ourSpores.stream()
-            .map(os -> {
-                var maxDist = enemySpores.stream().map(es -> {
-                    var dist = distanceSporePosition(os, es.position());
-                    return dist;
-                }).max(Integer::compare).orElse(0);
+                .map(os -> {
+                    var maxDist = enemySpores.stream().map(es -> {
+                        var dist = distanceSporePosition(os, es.position());
+                        return dist;
+                    }).max(Integer::compare).orElse(0);
 
-                return new Pair<>(os, maxDist);
-            })
-            .max(Comparator.comparingInt(Pair::second))
-            .map(p -> p.first().id())
-            .orElse(null);
+                    return new Pair<>(os, maxDist);
+                })
+                .max(Comparator.comparingInt(Pair::second))
+                .map(p -> p.first().id())
+                .orElse(null);
     }
 
     public List<Action> determineActionAllSpore(TeamGameState gameMessage) {
@@ -121,7 +127,7 @@ public class Bot {
             Position position = posNutrient.position;
             if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId())) {
                 List<PathFinder.State> shortest = shortestPathRealCost(gameMessage, spore.position(), position);
-                if (shortest.isEmpty()){
+                if (shortest.isEmpty()) {
                     continue;
                 }
                 int dist = shortest.getLast().cost;
@@ -134,21 +140,35 @@ public class Bot {
     }
 
     public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
-        if (!pathss.containsKey(spore.id())){
+        if (!pathss.containsKey(spore.id())) {
             List<PosNutrient> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
             List<List<PathFinder.State>> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
             if (ableToGo.isEmpty()) {
-                System.out.println("Defaulting to highest value : " + positionsSortedNutrient.getFirst().position.toString());
-                return new SporeMoveToAction(spore.id(), positionsSortedNutrient.getFirst().position);
+                int ranx = random.nextInt(gameMessage.world().map().width());
+                int rany = random.nextInt(gameMessage.world().map().height());
+                return new SporeMoveToAction(spore.id(), new Position(ranx, rany));
             }
-            pathss.put(spore.id(), ableToGo.getFirst());
+            for (List<PathFinder.State> states : ableToGo) {
+                boolean already = false;
+                for (List<PathFinder.State> objective : pathss.values()) {
+                    if (objective.getLast().equals(states.getLast())) {
+                        already = true;
+                    }
+                }
+                if (!already) {
+                    pathss.put(spore.id(), states);
+                    break;
+                }
+            }
+            if (!pathss.containsKey(spore.id())) {
+                pathss.put(spore.id(), ableToGo.getFirst());
+            }
         }
         PathFinder.State nextPos = pathss.get(spore.id()).getFirst();
         pathss.get(spore.id()).removeFirst();
-        if (pathss.get(spore.id()).isEmpty()){
+        if (pathss.get(spore.id()).isEmpty()) {
             pathss.remove(spore.id());
         }
-        System.out.println("Going to highest reachable value : " + nextPos.toString());
         return new SporeMoveToAction(spore.id(), new Position(nextPos.x, nextPos.y));
     }
 
@@ -158,5 +178,32 @@ public class Bot {
 
     public List<PathFinder.State> shortestPathRealCost(TeamGameState gameState, Position start, Position going) {
         return PathFinder.shortestPath(start, going, gameState);
+    }
+
+    public static int howMuchTeamProduce(TeamGameState gameMessage, String teamId) {
+        int tot = 0;
+        for (int i = 0; i < gameMessage.world().ownershipGrid().length; i++) {
+            for (int j = 0; j < gameMessage.world().ownershipGrid()[0].length; j++) {
+                if (Objects.equals(gameMessage.world().ownershipGrid()[i][j], teamId)) {
+                    tot += gameMessage.world().map().nutrientGrid()[i][j];
+                }
+            }
+        }
+        return tot;
+    }
+
+    public static boolean weHaveAdvantage(TeamGameState gameState) {
+        return Objects.equals(advantagedTeam(gameState), gameState.yourTeamId());
+    }
+
+    public static String advantagedTeam(TeamGameState gameState) {
+        String maxiS = gameState.yourTeamId();
+        int maxi = 0;
+        for (String teams : gameState.teamIds()) {
+            if (maxi < howMuchTeamProduce(gameState, teams)) {
+                maxiS = teams;
+            }
+        }
+        return maxiS;
     }
 }
