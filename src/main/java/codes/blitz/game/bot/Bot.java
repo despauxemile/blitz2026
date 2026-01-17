@@ -33,6 +33,9 @@ public class Bot {
             }
         }
 
+        if (spawnerState == SpawnerState.MoreWeaker){
+            System.out.println("We are bursting");
+        }
         if (weWinning && spawnerState == SpawnerState.FewerStronger) {
             System.out.println("We have advantage");
             spawnerState = SpawnerState.MoreWeaker;
