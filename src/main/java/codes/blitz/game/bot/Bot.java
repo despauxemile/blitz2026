@@ -71,7 +71,7 @@ public class Bot {
     // ensuite les spores décident s'ils sont capables de s'y rendre
     public List<PosNutrient> determineCellMostNutrient(TeamGameState gameMessage) {
 
-        if (!sortedNutrient.isEmpty()){
+        if (!sortedNutrient.isEmpty()) {
             return sortedNutrient;
         }
 
@@ -81,7 +81,7 @@ public class Bot {
 
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
-                positions.add(new PosNutrient(new Position(i,j), gameMessage.world().map().nutrientGrid()[i][j]));
+                positions.add(new PosNutrient(new Position(i, j), gameMessage.world().map().nutrientGrid()[i][j]));
             }
         }
         positions.sort(Comparator.comparingInt(s -> s.nutrient));
@@ -93,14 +93,15 @@ public class Bot {
      * Assume que la liste de position passée est triée
      * en fonction que le premier est la position avec le plus de nutriments
      */
-    public List<PosNutrient> determineMostNutrientAbleToGo(TeamGameState gameMessage, Spore spore, List<PosNutrient> sortedNutrientPosition) {
-        List<PosNutrient> positions = new ArrayList<>();
+    public List<List<PathFinder.State>> determineMostNutrientAbleToGo(TeamGameState gameMessage, Spore spore, List<PosNutrient> sortedNutrientPosition) {
+        List<List<PathFinder.State>> positions = new ArrayList<>();
         for (PosNutrient posNutrient : sortedNutrientPosition) {
             Position position = posNutrient.position;
             if (!Objects.equals(gameMessage.world().ownershipGrid()[position.x()][position.y()], gameMessage.yourTeamId())) {
-                int dist = distanceSporePosition(spore, position);
+                List<PathFinder.State> shortest = shortestPathRealCost(gameMessage, spore.position(), position);
+                int dist = shortest.getLast().cost;
                 if (dist <= spore.biomass()) {
-                    positions.add(posNutrient);
+                    positions.add(shortest);
                 }
             }
         }
@@ -109,14 +110,19 @@ public class Bot {
 
     public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
         List<PosNutrient> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
-        List<PosNutrient> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
+        List<List<PathFinder.State>> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
         if (ableToGo.isEmpty()) {
             return new SporeMoveToAction(spore.id(), positionsSortedNutrient.getFirst().position);
         }
-        return new SporeMoveToAction(spore.id(), ableToGo.getFirst().position);
+        PathFinder.State nextPos = ableToGo.getFirst().getFirst();
+        return new SporeMoveToAction(spore.id(), new Position(nextPos.x, nextPos.y));
     }
 
     public int distanceSporePosition(Spore spore, Position position) {
         return Math.abs(spore.position().x() - position.x()) + Math.abs(spore.position().y() - position.y());
+    }
+
+    public List<PathFinder.State> shortestPathRealCost(TeamGameState gameState, Position start, Position going) {
+        return PathFinder.shortestPath(start, going, gameState);
     }
 }
