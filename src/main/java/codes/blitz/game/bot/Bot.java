@@ -12,6 +12,7 @@ public class Bot {
     static List<PosNutrient> sortedNutrient = new ArrayList<>();
     static HashMap<String, List<PathFinder.State>> pathss = new HashMap<>();
     static SpawnerState spawnerState = SpawnerState.FewerStronger;
+    static boolean weWinning = false;
 
     public Bot() {
         System.out.println("Initializing your super mega duper bot");
@@ -24,6 +25,7 @@ public class Bot {
         List<Action> actions = new ArrayList<>();
 
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
+        weWinning = weHaveAdvantage(gameMessage);
         HashMap<String, List<PathFinder.State>> pathsnew = new HashMap<>();
         for (Spore spor : gameMessage.world().spores()) {
             if (pathss.containsKey(spor.id())) {
@@ -31,7 +33,7 @@ public class Bot {
             }
         }
 
-        if (weHaveAdvantage(gameMessage) && spawnerState == SpawnerState.FewerStronger) {
+        if (weWinning && spawnerState == SpawnerState.FewerStronger) {
             System.out.println("We have advantage");
             spawnerState = SpawnerState.MoreWeaker;
         }

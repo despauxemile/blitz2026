@@ -6,6 +6,7 @@ import codes.blitz.game.generated.TeamGameState;
 import java.util.*;
 
 import static codes.blitz.game.bot.Bot.weHaveAdvantage;
+import static codes.blitz.game.bot.Bot.weWinning;
 
 public class PathFinder {
 
@@ -45,15 +46,18 @@ public class PathFinder {
 
         int[][] grid = gameMessage.world().map().nutrientGrid();
 
+        int oursWinningValue = weWinning ? 1 : 0;
+        int enemyEmptyValue = weWinning ? 0 : 1;
+
         for (int i = 0; i < grid.length; i++) {
             for (int j = 0; j < grid[0].length; j++) {
                 boolean isOurs = Objects.equals(gameMessage.world().ownershipGrid()[i][j], gameMessage.yourTeamId());
                 if (isOurs) {
-                    grid[i][j] = weHaveAdvantage(gameMessage) ? 1 : 0;
-                } else if (gameMessage.world().biomassGrid()[i][j]!=0){
+                    grid[i][j] = oursWinningValue;
+                } else if (gameMessage.world().biomassGrid()[i][j] != 0) {
                     grid[i][j] = gameMessage.world().biomassGrid()[i][j];
-                }else{
-                    grid[i][j] =  weHaveAdvantage(gameMessage) ? 0 : 1;
+                } else {
+                    grid[i][j] = enemyEmptyValue;
                 }
             }
         }
