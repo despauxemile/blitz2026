@@ -42,15 +42,16 @@ public class PathFinder {
         int goalY = goal.y();
 
         int[][] grid = gameMessage.world().map().nutrientGrid();
+
         for (int i = 0; i < grid.length; i++) {
             for (int j = 0; j < grid[0].length; j++) {
                 boolean isOurs = Objects.equals(gameMessage.world().ownershipGrid()[i][j], gameMessage.yourTeamId());
                 if (isOurs) {
-                    grid[i][j] = 0;
+                    grid[i][j] = 1;
                 } else if (gameMessage.world().biomassGrid()[i][j]!=0){
                     grid[i][j] = gameMessage.world().biomassGrid()[i][j];
                 }else{
-                    grid[i][j] = 1;
+                    grid[i][j] = 0;
                 }
             }
         }

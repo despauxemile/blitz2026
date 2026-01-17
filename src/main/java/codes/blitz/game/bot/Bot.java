@@ -134,8 +134,9 @@ public class Bot {
             List<PosNutrient> positionsSortedNutrient = determineCellMostNutrient(gameMessage);
             List<List<PathFinder.State>> ableToGo = determineMostNutrientAbleToGo(gameMessage, spore, positionsSortedNutrient);
             if (ableToGo.isEmpty()) {
-                System.out.println("Defaulting to highest value : " + positionsSortedNutrient.getFirst().position.toString());
-                return new SporeMoveToAction(spore.id(), positionsSortedNutrient.getFirst().position);
+                int ranx = random.nextInt(gameMessage.world().map().width());
+                int rany = random.nextInt(gameMessage.world().map().height());
+                return new SporeMoveToAction(spore.id(), new Position(ranx, rany));
             }
             for (List<PathFinder.State> states : ableToGo) {
                 boolean already = false;
@@ -145,7 +146,7 @@ public class Bot {
                     }
                 }
                 if (!already) {
-                    pathss.put(spore.id(), ableToGo.getFirst());
+                    pathss.put(spore.id(), states);
                     break;
                 }
             }
@@ -168,5 +169,28 @@ public class Bot {
 
     public List<PathFinder.State> shortestPathRealCost(TeamGameState gameState, Position start, Position going) {
         return PathFinder.shortestPath(start, going, gameState);
+    }
+
+    public int howMuchTeamProduce(TeamGameState gameMessage, String teamId) {
+        int tot = 0;
+        for (int i = 0; i < gameMessage.world().ownershipGrid().length; i++) {
+            for (int j = 0; j < gameMessage.world().ownershipGrid()[0].length; j++) {
+                if (Objects.equals(gameMessage.world().ownershipGrid()[i][j], teamId)) {
+                    tot += gameMessage.world().map().nutrientGrid()[i][j];
+                }
+            }
+        }
+        return tot;
+    }
+
+    public String advantagedTeam(TeamGameState gameState) {
+        String maxiS = gameState.yourTeamId();
+        int maxi = 0;
+        for (String teams : gameState.teamIds()) {
+            if (maxi < howMuchTeamProduce(gameState, teams)) {
+                maxiS = teams;
+            }
+        }
+        return maxiS;
     }
 }
