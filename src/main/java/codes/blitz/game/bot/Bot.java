@@ -45,6 +45,8 @@ public class Bot {
         if (myTeam.spores().isEmpty())
             return true;
         Spore strongest = getStrongestSpore(gameMessage);
+        if (myTeam.nutrients() > 20)
+            return true;
         return myTeam.nutrients() > strongest.biomass();
     }
 
