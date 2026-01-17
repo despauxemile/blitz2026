@@ -48,12 +48,36 @@ public class Bot {
         List<Action> actions = new ArrayList<>();
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
         for (Spore spore : myTeam.spores()) {
-          actions.add(determineSporeAction(spore));
+            actions.add(determineSporeAction(gameMessage, spore));
         }
         return actions;
     }
 
-    public Action determineSporeAction(Spore spore) {
-        return new SporeMoveToAction(spore.id(), new Position(0, 0));
+    //transformer ca en liste des plus nutrimenté
+    // ensuite les spores décident s'ils sont capables de s'y rendre
+    public List<Position> determineCellMostNutrient(TeamGameState gameMessage) {
+        List<Position> positions = new ArrayList<>();
+        int width = gameMessage.world().map().width();
+        int height = gameMessage.world().map().height();
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                int liveValue = gameMessage.world().map().nutrientGrid()[i][j];
+                if (positions.isEmpty()) {
+                    positions.addFirst(new Position(i, j));
+                } else {
+                    for (int k = 0; k < positions.size(); k++) {
+                        Position position = positions.get(k);
+                        if (liveValue < gameMessage.world().map().nutrientGrid()[position.x()][position.y()]) {
+                            positions.add(k, new Position(i, j));
+                        }
+                    }
+                }
+            }
+        }
+        return positions;
+    }
+
+    public Action determineSporeAction(TeamGameState gameMessage, Spore spore) {
+        return new SporeMoveToAction(spore.id(), determineCellMostNutrient(gameMessage).getFirst());
     }
 }
