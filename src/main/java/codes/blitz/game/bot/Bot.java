@@ -13,6 +13,7 @@ public class Bot {
     static HashMap<String, List<PathFinder.State>> pathss = new HashMap<>();
     static SpawnerState spawnerState = SpawnerState.FewerStronger;
     static boolean weWinning = false;
+    static int bank = 0;
     static boolean first = true;
 
     public Bot() {
@@ -48,11 +49,18 @@ public class Bot {
         }
 
         if (decideIfCreateSpawner(gameMessage)) {
+            if (bank > 0)
+                bank -= myTeam.nextSpawnerCost();
             actions.add(new SporeCreateSpawnerAction(getIdSporeFurtherFromOtherTeam(gameMessage)));
         }
         for (int i = 0; i < myTeam.spawners().size(); i++) {
             if (spawnerState == SpawnerState.MoreWeaker || decideIfSpawnSpore(gameMessage)) {
-                actions.add(new SpawnerProduceSporeAction(myTeam.spawners().get(i).id(), myTeam.nutrients() / myTeam.spawners().size()));
+                if (gameMessage.tick() > 25 && !myTeam.spores().isEmpty())
+                    bank += 1;
+                if (myTeam.spawners().size() >= 5){
+                    bank  = 0;
+                }
+                actions.add(new SpawnerProduceSporeAction(myTeam.spawners().get(i).id(), (myTeam.nutrients()-bank) / myTeam.spawners().size()));
             }
         }
 
@@ -71,6 +79,8 @@ public class Bot {
                 }
             }
             if (!canReachOne) {
+                if (bank > 0)
+                    bank -= gameMessage.world().teamInfos().get(gameMessage.yourTeamId()).nextSpawnerCost();
                 actions.add(new SporeCreateSpawnerAction(spore.id()));
             }
         }
@@ -79,7 +89,7 @@ public class Bot {
 
     public boolean decideIfCreateSpawner(TeamGameState gameMessage) {
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
-        if (myTeam.spawners().isEmpty() || (spawnerState == SpawnerState.MoreWeaker && myTeam.spawners().size() < 4 && gameMessage.tick() > 50)) {
+        if (myTeam.spawners().isEmpty()) {
             return true;
         }
         return false;
@@ -180,6 +190,8 @@ public class Bot {
             if (noSpawnerAroundPoint(gameMessage, spore.position())) {
                 TeamInfo ours = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
                 if (ours.nutrients() > ours.nextSpawnerCost()) {
+                    if (bank > 0)
+                        bank -= ours.nextSpawnerCost();
                     return new SporeCreateSpawnerAction(spore.id());
                 }
             }
