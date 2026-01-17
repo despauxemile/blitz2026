@@ -34,7 +34,6 @@ public class Bot {
         if (myTeam.spawners().isEmpty()) {
             return true;
         }
-        ;
         return false;
     }
 
