@@ -55,8 +55,11 @@ public class Bot {
         }
         for (int i = 0; i < myTeam.spawners().size(); i++) {
             if (spawnerState == SpawnerState.MoreWeaker || decideIfSpawnSpore(gameMessage)) {
-//                if (gameMessage.tick() > 25 && !myTeam.spores().isEmpty())
-//                    bank += 1;
+                if (gameMessage.tick() > 25 && !myTeam.spores().isEmpty())
+                    bank += 1;
+                if (myTeam.spawners().size() >= 5){
+                    bank  = 0;
+                }
                 actions.add(new SpawnerProduceSporeAction(myTeam.spawners().get(i).id(), (myTeam.nutrients()-bank) / myTeam.spawners().size()));
             }
         }
@@ -86,7 +89,7 @@ public class Bot {
 
     public boolean decideIfCreateSpawner(TeamGameState gameMessage) {
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
-        if (myTeam.spawners().isEmpty() || (spawnerState == SpawnerState.MoreWeaker && myTeam.spawners().size() < 4 && gameMessage.tick() > 50)) {
+        if (myTeam.spawners().isEmpty()) {
             return true;
         }
         return false;
