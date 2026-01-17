@@ -21,7 +21,7 @@ public class Bot {
 
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
 
-        if (myTeam.spawners().isEmpty()) {
+        if (decideIfCreateSpawner(gameMessage)) {
             actions.add(new SporeCreateSpawnerAction(myTeam.spores().getFirst().id()));
         } else if (myTeam.spores().isEmpty()) {
             actions.add(new SpawnerProduceSporeAction(myTeam.spawners().getFirst().id(), myTeam.nutrients()));
@@ -31,13 +31,12 @@ public class Bot {
         return actions;
     }
 
-    public List<Action> decideIfCreateSpawner(TeamGameState gameMessage) {
-        List<Action> actions = new ArrayList<>();
+    public boolean decideIfCreateSpawner(TeamGameState gameMessage) {
         TeamInfo myTeam = gameMessage.world().teamInfos().get(gameMessage.yourTeamId());
         if (myTeam.nextSpawnerCost() <= myTeam.nutrients()) {
-            actions.add(new SporeCreateSpawnerAction(myTeam.spores().getFirst().id()));
-        }
-        return actions;
+            return true;
+        };
+        return false;
     }
 
     public String getIdSporeFurtherFromOtherTeam() {
